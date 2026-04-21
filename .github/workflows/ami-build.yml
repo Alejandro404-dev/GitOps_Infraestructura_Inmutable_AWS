@@ -1,6 +1,6 @@
 name: 1. AMI Build Pipeline (Packer + Ansible)
 
-# El pipeline se dispara SOLAMENTE si se tocan archivos de estas carpetas
+# El pipeline se dispara SOLAMENTE si se tocan archivos de estas carpetas 
 on:
   push:
     branches:
