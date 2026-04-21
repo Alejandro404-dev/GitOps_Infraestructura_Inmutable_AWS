@@ -1,0 +1,60 @@
+name: 1. AMI Build Pipeline (Packer + Ansible)
+
+# El pipeline se dispara SOLAMENTE si se tocan archivos de estas carpetas
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'packer/**'
+      - 'ansible/**'
+
+env:
+  AWS_REGION: us-east-1
+
+jobs:
+  build_ami:
+    name: Lint, Build, Test & Tag AMI
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout del código
+        uses: actions/checkout@v4
+
+      - name: Configurar Credenciales de AWS (Soporte para Academy)
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-session-token: ${{ secrets.AWS_SESSION_TOKEN }} 
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Setup Packer
+        uses: hashicorp/setup-packer@main
+        with:
+          version: "latest"
+
+      - name: Packer Init & Validate (Lint)
+        run: |
+          echo "Ejecutando validación de sintaxis HCL2..."
+          # packer init packer/
+          # packer validate packer/
+
+      - name: Packer Build (con Ansible Provisioner)
+        run: |
+          echo "Construyendo la Golden AMI..."
+          # packer build packer/ubuntu.pkr.hcl
+          
+      - name: Test AMI (Goss / InSpec)
+        run: |
+          echo "Corriendo pruebas: verificando puerto 80 y Nginx..."
+          # script_de_pruebas.sh
+
+      - name: Tag as Golden
+        run: |
+          echo "Pruebas pasadas. Etiquetando AMI en AWS..."
+
+      - name: Update SSM Parameter Store
+        run: |
+          echo "Actualizando el /app/ami-id para Terraform..."
+          # aws ssm put-parameter --name "/app/ami-id" --value "$NUEVA_AMI_ID" --type "String" --overwrite

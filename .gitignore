@@ -1,0 +1,17 @@
+# --- Binarios y Plugins (Los que pesan 800MB+) ---
+**/terraform.exe
+**/.terraform/
+**/*.exe
+
+# --- Estado de Terraform (Secretos y bloqueos) ---
+*.tfstate
+*.tfstate.backup
+.terraform.lock.hcl
+
+# --- Variables Sensibles ---
+*.tfvars
+*.tfvars.json
+
+# --- Archivos de Sistema ---
+.DS_Store
+Thumbs.db
