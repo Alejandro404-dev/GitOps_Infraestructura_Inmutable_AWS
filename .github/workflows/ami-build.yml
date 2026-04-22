@@ -1,60 +1,165 @@
-name: 1. AMI Build Pipeline (Packer + Ansible)
+name: ami-build
 
-# El pipeline se dispara SOLAMENTE si se tocan archivos de estas carpetas 
 on:
   push:
-    branches:
-      - main
+    branches: [main]
     paths:
-      - 'packer/**'
-      - 'ansible/**'
+      - "packer/**"
+      - "ansible/**"
+  workflow_dispatch:
 
 env:
   AWS_REGION: us-east-1
+  SSM_AMI_PARAM_NAME: /app/ami-id
 
 jobs:
-  build_ami:
-    name: Lint, Build, Test & Tag AMI
+  lint:
     runs-on: ubuntu-latest
-    
     steps:
-      - name: Checkout del código
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
+      - uses: hashicorp/setup-packer@v3
+      - name: Install ansible-lint
+        run: pipx install ansible-lint
+      - name: Ansible lint
+        run: ansible-lint ansible/playbook.yml
+      - name: Packer init and validate
+        run: |
+          packer init packer/ubuntu-2204.pkr.hcl
+          packer validate packer/ubuntu-2204.pkr.hcl
 
-      - name: Configurar Credenciales de AWS (Soporte para Academy)
-        uses: aws-actions/configure-aws-credentials@v4
+  build_ami:
+    runs-on: ubuntu-latest
+    needs: lint
+    outputs:
+      ami_id: ${{ steps.extract_ami.outputs.ami_id }}
+      version: ${{ steps.meta.outputs.version }}
+      build_date: ${{ steps.meta.outputs.build_date }}
+      git_commit: ${{ steps.meta.outputs.git_commit }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: aws-actions/configure-aws-credentials@v4
         with:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-session-token: ${{ secrets.AWS_SESSION_TOKEN }} 
+          aws-session-token: ${{ secrets.AWS_SESSION_TOKEN }}
           aws-region: ${{ env.AWS_REGION }}
+      - uses: hashicorp/setup-packer@v3
+      - name: Build metadata
+        id: meta
+        shell: bash
+        run: |
+          echo "version=v$(date -u +%Y.%m.%d).${GITHUB_RUN_NUMBER}" >> "$GITHUB_OUTPUT"
+          echo "build_date=$(date -u +%Y-%m-%dT%H:%M:%SZ)" >> "$GITHUB_OUTPUT"
+          echo "git_commit=${GITHUB_SHA}" >> "$GITHUB_OUTPUT"
+      - name: Build AMI
+        id: build
+        shell: bash
+        run: |
+          packer build \
+            -machine-readable \
+            -var "aws_region=${AWS_REGION}" \
+            -var "version=${{ steps.meta.outputs.version }}" \
+            -var "build_date=${{ steps.meta.outputs.build_date }}" \
+            -var "git_commit=${{ steps.meta.outputs.git_commit }}" \
+            packer/ubuntu-2204.pkr.hcl | tee packer-build.log
+      - name: Extract AMI id
+        id: extract_ami
+        shell: bash
+        run: |
+          ami_id="$(awk -F, '/artifact,0,id/ {print $6}' packer-build.log | awk -F: '{print $2}' | tail -n 1)"
+          test -n "$ami_id"
+          echo "ami_id=${ami_id}" >> "$GITHUB_OUTPUT"
 
-      - name: Setup Packer
-        uses: hashicorp/setup-packer@main
+  test_ami:
+    runs-on: ubuntu-latest
+    needs: build_ami
+    steps:
+      - uses: actions/checkout@v4
+      - uses: aws-actions/configure-aws-credentials@v4
         with:
-          version: "latest"
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-session-token: ${{ secrets.AWS_SESSION_TOKEN }}
+          aws-region: ${{ env.AWS_REGION }}
+      - name: Launch temporary instance for goss validation
+        id: ec2
+        shell: bash
+        run: |
+          iid="$(aws ec2 run-instances --image-id "${{ needs.build_ami.outputs.ami_id }}" --instance-type t3.micro --query 'Instances[0].InstanceId' --output text)"
+          echo "instance_id=${iid}" >> "$GITHUB_OUTPUT"
+          aws ec2 wait instance-status-ok --instance-ids "$iid"
+      - name: Validate AMI via SSM and goss
+        shell: bash
+        run: |
+          cat > goss.yaml <<'EOF'
+          service:
+            app.service:
+              enabled: true
+              running: true
+            nginx:
+              enabled: true
+              running: true
+          port:
+            tcp:80:
+              listening: true
+          file:
+            /etc/systemd/system/app.service:
+              exists: true
+          command:
+            health:
+              exec: "curl -sf http://127.0.0.1/health"
+              exit-status: 0
+          EOF
+          goss_content="$(base64 -w 0 goss.yaml)"
+          cmd_id="$(aws ssm send-command \
+            --instance-ids "${{ steps.ec2.outputs.instance_id }}" \
+            --document-name "AWS-RunShellScript" \
+            --parameters commands="echo ${goss_content} | base64 -d | sudo tee /tmp/goss.yaml >/dev/null","sudo goss -g /tmp/goss.yaml validate --format documentation" \
+            --query "Command.CommandId" \
+            --output text)"
+          aws ssm wait command-executed --command-id "$cmd_id" --instance-id "${{ steps.ec2.outputs.instance_id }}"
+      - name: Terminate temporary instance
+        if: always()
+        shell: bash
+        run: aws ec2 terminate-instances --instance-ids "${{ steps.ec2.outputs.instance_id }}"
 
-      - name: Packer Init & Validate (Lint)
+  tag_golden:
+    runs-on: ubuntu-latest
+    needs: [build_ami, test_ami]
+    steps:
+      - uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-session-token: ${{ secrets.AWS_SESSION_TOKEN }}
+          aws-region: ${{ env.AWS_REGION }}
+      - name: Tag AMI as golden
+        shell: bash
         run: |
-          echo "Ejecutando validación de sintaxis HCL2..."
-          # packer init packer/
-          # packer validate packer/
+          aws ec2 create-tags \
+            --resources "${{ needs.build_ami.outputs.ami_id }}" \
+            --tags \
+              Key=Name,Value=app-ubuntu-2204 \
+              Key=Version,Value=${{ needs.build_ami.outputs.version }} \
+              Key=BuildDate,Value=${{ needs.build_ami.outputs.build_date }} \
+              Key=GitCommit,Value=${{ needs.build_ami.outputs.git_commit }} \
+              Key=Golden,Value=true
 
-      - name: Packer Build (con Ansible Provisioner)
+  update_ssm_param:
+    runs-on: ubuntu-latest
+    needs: [build_ami, tag_golden]
+    steps:
+      - uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-session-token: ${{ secrets.AWS_SESSION_TOKEN }}
+          aws-region: ${{ env.AWS_REGION }}
+      - name: Update AMI ID in SSM Parameter Store
+        shell: bash
         run: |
-          echo "Construyendo la Golden AMI..."
-          # packer build packer/ubuntu.pkr.hcl
-          
-      - name: Test AMI (Goss / InSpec)
-        run: |
-          echo "Corriendo pruebas: verificando puerto 80 y Nginx..."
-          # script_de_pruebas.sh
-
-      - name: Tag as Golden
-        run: |
-          echo "Pruebas pasadas. Etiquetando AMI en AWS..."
-
-      - name: Update SSM Parameter Store
-        run: |
-          echo "Actualizando el /app/ami-id para Terraform..."
-          # aws ssm put-parameter --name "/app/ami-id" --value "$NUEVA_AMI_ID" --type "String" --overwrite
+          aws ssm put-parameter \
+            --name "${SSM_AMI_PARAM_NAME}" \
+            --value "${{ needs.build_ami.outputs.ami_id }}" \
+            --type "String" \
+            --overwrite

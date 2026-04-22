@@ -1,0 +1,8 @@
+- name: Bake Golden AMI for app
+  hosts: all
+  become: true
+  vars:
+    app_port: 8080
+  roles:
+    - role: app
+    - role: nginx

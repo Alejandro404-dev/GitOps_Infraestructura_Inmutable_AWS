@@ -1,0 +1,27 @@
+service:
+  app.service:
+    enabled: true
+    running: true
+  nginx:
+    enabled: true
+    running: true
+
+port:
+  tcp:80:
+    listening: true
+  tcp:8080:
+    listening: true
+
+file:
+  /etc/systemd/system/app.service:
+    exists: true
+  /usr/local/bin/app-health.sh:
+    exists: true
+    mode: "0755"
+  /etc/nginx/sites-enabled/default:
+    exists: true
+
+command:
+  health_endpoint:
+    exec: "curl -sf http://127.0.0.1/health"
+    exit-status: 0
