@@ -87,11 +87,7 @@ build {
     script = "${path.root}/scripts/cleanup.sh"
   }
 
-  post-processor "shell-local" {
-    inline = [
-      "AMI_ID=$(echo $PACKER_ARTIFACT_ID | awk -F: '{print $2}')",
-      "echo \"Guardando la AMI generada ($AMI_ID) en SSM Parameter Store...\"",
-      "aws ssm put-parameter --region ${var.aws_region} --name /app/ami-id --value $AMI_ID --type String --overwrite"
-    ]
+provisioner "shell" {
+    script = "${path.root}/scripts/cleanup.sh"
   }
 }
