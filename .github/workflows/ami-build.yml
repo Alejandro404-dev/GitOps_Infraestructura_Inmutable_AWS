@@ -44,6 +44,7 @@ jobs:
           aws-session-token: ${{ secrets.AWS_SESSION_TOKEN }}
           aws-region: ${{ env.AWS_REGION }}
       - uses: hashicorp/setup-packer@v3
+      
       - name: Build metadata
         id: meta
         shell: bash
@@ -51,6 +52,10 @@ jobs:
           echo "version=v$(date -u +%Y.%m.%d).${GITHUB_RUN_NUMBER}" >> "$GITHUB_OUTPUT"
           echo "build_date=$(date -u +%Y-%m-%dT%H:%M:%SZ)" >> "$GITHUB_OUTPUT"
           echo "git_commit=${GITHUB_SHA}" >> "$GITHUB_OUTPUT"
+
+      - name: Initialize Packer Plugins
+        run: packer init packer/ubuntu-2204.pkr.hcl
+
       - name: Build AMI
         id: build
         shell: bash
@@ -62,6 +67,7 @@ jobs:
             -var "build_date=${{ steps.meta.outputs.build_date }}" \
             -var "git_commit=${{ steps.meta.outputs.git_commit }}" \
             packer/ubuntu-2204.pkr.hcl | tee packer-build.log
+
       - name: Extract AMI id
         id: extract_ami
         shell: bash
