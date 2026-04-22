@@ -82,7 +82,7 @@ build {
     script = "${path.root}/scripts/cleanup.sh"
   }
 
- post-processor "shell-local" {
+  post-processor "shell-local" {
     environment_vars = [
       "PACKER_ARTIFACT_ID=${build.ArtifactId}",
       "PACKER_REGION=${var.aws_region}"
@@ -93,3 +93,4 @@ build {
       "aws ssm put-parameter --region $PACKER_REGION --name /app/ami-id --value $AMI_ID --type String --overwrite"
     ]
   }
+}
