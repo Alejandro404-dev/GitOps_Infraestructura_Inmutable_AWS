@@ -122,7 +122,7 @@ data "aws_subnets" "default" {
 variable "ami_id" {
   description = "ID de la AMI dorada"
   type        = string
-  default     = "ami-0c7217cdde317cfec" 
+  default     = "ami-0c7217cdde317cfec"
 }
 
 resource "aws_security_group" "ec2_sg" {

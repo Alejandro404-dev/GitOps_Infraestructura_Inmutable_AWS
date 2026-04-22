@@ -14,34 +14,34 @@ resource "aws_cloudwatch_dashboard" "app" {
   dashboard_body = jsonencode({
     widgets = [
       {
-        type = "metric"
-        x    = 0
-        y    = 0
-        width = 12
+        type   = "metric"
+        x      = 0
+        y      = 0
+        width  = 12
         height = 6
         properties = {
-          title   = "ALB RequestCount"
-          view    = "timeSeries"
-          stat    = "Sum"
-          period  = 60
-          region  = var.aws_region
+          title  = "ALB RequestCount"
+          view   = "timeSeries"
+          stat   = "Sum"
+          period = 60
+          region = var.aws_region
           metrics = [
             ["AWS/ApplicationELB", "RequestCount", "LoadBalancer", aws_lb.app.arn_suffix]
           ]
         }
       },
       {
-        type = "metric"
-        x    = 12
-        y    = 0
-        width = 12
+        type   = "metric"
+        x      = 12
+        y      = 0
+        width  = 12
         height = 6
         properties = {
-          title   = "TargetGroup Health"
-          view    = "timeSeries"
-          stat    = "Average"
-          period  = 60
-          region  = var.aws_region
+          title  = "TargetGroup Health"
+          view   = "timeSeries"
+          stat   = "Average"
+          period = 60
+          region = var.aws_region
           metrics = [
             ["AWS/ApplicationELB", "HealthyHostCount", "TargetGroup", aws_lb_target_group.app.arn_suffix, "LoadBalancer", aws_lb.app.arn_suffix],
             [".", "UnHealthyHostCount", ".", ".", ".", "."]
@@ -49,17 +49,17 @@ resource "aws_cloudwatch_dashboard" "app" {
         }
       },
       {
-        type = "metric"
-        x    = 0
-        y    = 6
-        width = 12
+        type   = "metric"
+        x      = 0
+        y      = 6
+        width  = 12
         height = 6
         properties = {
-          title   = "ASG InService Instances"
-          view    = "timeSeries"
-          stat    = "Average"
-          period  = 60
-          region  = var.aws_region
+          title  = "ASG InService Instances"
+          view   = "timeSeries"
+          stat   = "Average"
+          period = 60
+          region = var.aws_region
           metrics = [
             ["AWS/AutoScaling", "GroupInServiceInstances", "AutoScalingGroupName", aws_autoscaling_group.app_asg.name]
           ]
