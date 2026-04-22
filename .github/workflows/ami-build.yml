@@ -53,6 +53,14 @@ jobs:
           echo "build_date=$(date -u +%Y-%m-%dT%H:%M:%SZ)" >> "$GITHUB_OUTPUT"
           echo "git_commit=${GITHUB_SHA}" >> "$GITHUB_OUTPUT"
 
+      # --- INICIO DEL PARCHE AWS ACADEMY ---
+      - name: Setup Vockey for AWS Academy
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.VOCKEY_PEM }}" > ~/.ssh/vockey.pem
+          chmod 400 ~/.ssh/vockey.pem
+      # --- FIN DEL PARCHE AWS ACADEMY ---
+
       - name: Initialize and Build AMI
         id: build
         shell: bash
