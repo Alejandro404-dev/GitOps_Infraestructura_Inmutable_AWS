@@ -31,10 +31,10 @@ data "aws_subnets" "default" {
   }
 }
 
-data "aws_ssm_parameter" "current_ami" {
-  count = var.use_ssm_ami ? 1 : 0
-  name  = var.ssm_ami_param_name
-}
+# data "aws_ssm_parameter" "current_ami" {
+#   count = var.use_ssm_ami ? 1 : 0
+#   name  = var.ssm_ami_param_name
+# }
 
 data "aws_ami" "latest_golden" {
   most_recent = true
