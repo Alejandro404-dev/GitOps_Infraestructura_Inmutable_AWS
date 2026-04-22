@@ -23,9 +23,10 @@ resource "aws_launch_template" "app_lt" {
   image_id      = local.ami_id_effective
   instance_type = var.instance_type
 
-  iam_instance_profile {
-    arn = aws_iam_instance_profile.ec2_profile.arn
-  }
+  # COMENTADO POR RESTRICCIONES DE AWS ACADEMY
+  # iam_instance_profile {
+  #   arn = aws_iam_instance_profile.ec2_profile.arn
+  # }
 
   network_interfaces {
     associate_public_ip_address = true
