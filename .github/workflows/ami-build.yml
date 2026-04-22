@@ -107,7 +107,12 @@ jobs:
         id: ec2
         shell: bash
         run: |
-          iid="$(aws ec2 run-instances --image-id "${{ needs.build_ami.outputs.ami_id }}" --instance-type t3.micro --query 'Instances[0].InstanceId' --output text)"
+          iid="$(aws ec2 run-instances \
+            --image-id "${{ needs.build_ami.outputs.ami_id }}" \
+            --instance-type t3.micro \
+            --key-name vockey \
+            --iam-instance-profile Name=LabInstanceProfile \
+            --query 'Instances[0].InstanceId' --output text)"
           echo "instance_id=${iid}" >> "$GITHUB_OUTPUT"
           aws ec2 wait instance-status-ok --instance-ids "$iid"
       - name: Validate AMI via SSM and goss
