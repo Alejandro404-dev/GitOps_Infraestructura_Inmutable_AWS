@@ -53,13 +53,13 @@ jobs:
           echo "build_date=$(date -u +%Y-%m-%dT%H:%M:%SZ)" >> "$GITHUB_OUTPUT"
           echo "git_commit=${GITHUB_SHA}" >> "$GITHUB_OUTPUT"
 
-      - name: Initialize Packer Plugins
-        run: packer init packer/ubuntu-2204.pkr.hcl
-
-      - name: Build AMI
+      - name: Initialize and Build AMI
         id: build
         shell: bash
         run: |
+          # Forzamos el init justo antes del build en la misma shell
+          packer init packer/ubuntu-2204.pkr.hcl
+          
           packer build \
             -machine-readable \
             -var "aws_region=${AWS_REGION}" \
