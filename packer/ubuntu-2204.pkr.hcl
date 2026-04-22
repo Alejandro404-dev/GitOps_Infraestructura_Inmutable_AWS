@@ -84,8 +84,9 @@ build {
 
   post-processor "shell-local" {
     inline = [
-      "AMI_ID=$(echo '{{ .ArtifactId }}' | awk -F: '{print $2}')",
-      "aws ec2 create-tags --region ${var.aws_region} --resources ${AMI_ID} --tags Key=Name,Value=app-ubuntu-2204 Key=Version,Value=${var.version} Key=BuildDate,Value=${var.build_date} Key=GitCommit,Value=${var.git_commit}"
+      "AMI_ID=$(echo '${build.ArtifactId}' | awk -F: '{print $2}')",
+      "echo \"Guardando la AMI generada ($${AMI_ID}) en SSM Parameter Store...\"",
+      "aws ssm put-parameter --region ${var.aws_region} --name /app/ami-id --value $${AMI_ID} --type String --overwrite"
     ]
   }
 }
