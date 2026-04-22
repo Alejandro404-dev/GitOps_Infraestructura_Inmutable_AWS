@@ -1,5 +1,5 @@
 resource "aws_security_group" "web_sg" {
-  name        = "${var.app_name}-web-sg-v2"
+  name        = "${var.app_name}-web-sg-v3"
   description = "Allow HTTP and SSH"
   vpc_id      = data.aws_vpc.default.id
 
