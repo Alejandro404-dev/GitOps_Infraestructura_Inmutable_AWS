@@ -1,5 +1,5 @@
 resource "aws_security_group" "web_sg" {
-  name        = "${var.app_name}-web-sg-v2" 
+  name        = "${var.app_name}-web-sg-v2"
   description = "Allow HTTP and SSH"
   vpc_id      = data.aws_vpc.default.id
 
@@ -29,7 +29,7 @@ resource "aws_instance" "app_server" {
   ami                  = local.ami_id_effective
   instance_type        = "t3.micro"
   key_name             = "vockey"
-  iam_instance_profile = "LabInstanceProfile" # <-- ¡EL PASE VIP DE AWS ACADEMY!
+  iam_instance_profile = "LabInstanceProfile"
 
   vpc_security_group_ids = [aws_security_group.web_sg.id]
 
