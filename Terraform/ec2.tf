@@ -1,5 +1,5 @@
 resource "aws_security_group" "web_sg" {
-  name        = "${var.app_name}-web-sg-v4"
+  name        = "${var.app_name}-web-sg-v5"
   description = "Allow HTTP and SSH"
   vpc_id      = data.aws_vpc.default.id
 
@@ -27,7 +27,7 @@ resource "aws_security_group" "web_sg" {
 
 resource "aws_instance" "app_server" {
   ami           = local.ami_id_effective
-  instance_type = "t3.micro"
+  instance_type = "t2.micro" # <-- ¡EL TRUCO ESTÁ AQUÍ!
   key_name      = "vockey"
 
   vpc_security_group_ids = [aws_security_group.web_sg.id]
