@@ -36,22 +36,22 @@ data "aws_subnets" "default" {
 #   name  = var.ssm_ami_param_name
 # }
 
-data "aws_ami" "latest_golden" {
-  most_recent = true
-  owners      = ["self"]
-
-  filter {
-    name   = "tag:Name"
-    values = [var.ami_name]
-  }
-
-  filter {
-    name   = "tag:Golden"
-    values = ["true"]
-  }
-
-  filter {
-    name   = "state"
-    values = ["available"]
-  }
-}
+# data "aws_ami" "latest_golden" {
+#   most_recent = true
+#   owners      = ["self"]
+#
+#   filter {
+#     name   = "tag:Name"
+#     values = [var.ami_name]
+#   }
+#
+#   filter {
+#     name   = "tag:Golden"
+#     values = ["true"]
+#   }
+#
+#   filter {
+#     name   = "state"
+#     values = ["available"]
+#   }
+# }
