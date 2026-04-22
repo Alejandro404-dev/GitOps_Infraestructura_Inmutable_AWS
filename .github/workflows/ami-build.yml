@@ -22,6 +22,15 @@ jobs:
         run: pipx install ansible-lint 
       - name: Ansible lint
         run: ansible-lint ansible/playbook.yml
+
+      # --- PARCHE PARA QUE EL VALIDATE NO EXPLOTE ---
+      - name: Setup Vockey for Validation
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.VOCKEY_PEM }}" > ~/.ssh/vockey.pem
+          chmod 400 ~/.ssh/vockey.pem
+      # ----------------------------------------------
+
       - name: Packer init and validate
         run: |
           packer init packer/ubuntu-2204.pkr.hcl
@@ -53,19 +62,18 @@ jobs:
           echo "build_date=$(date -u +%Y-%m-%dT%H:%M:%SZ)" >> "$GITHUB_OUTPUT"
           echo "git_commit=${GITHUB_SHA}" >> "$GITHUB_OUTPUT"
 
-      # --- INICIO DEL PARCHE AWS ACADEMY ---
+      # --- PARCHE PARA EL BUILD REAL ---
       - name: Setup Vockey for AWS Academy
         run: |
           mkdir -p ~/.ssh
           echo "${{ secrets.VOCKEY_PEM }}" > ~/.ssh/vockey.pem
           chmod 400 ~/.ssh/vockey.pem
-      # --- FIN DEL PARCHE AWS ACADEMY ---
+      # ----------------------------------
 
       - name: Initialize and Build AMI
         id: build
         shell: bash
         run: |
-          # Forzamos el init justo antes del build en la misma shell
           packer init packer/ubuntu-2204.pkr.hcl
           
           packer build \
