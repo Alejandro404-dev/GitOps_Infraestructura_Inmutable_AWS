@@ -26,9 +26,10 @@ resource "aws_security_group" "web_sg" {
 }
 
 resource "aws_instance" "app_server" {
-  ami           = local.ami_id_effective
-  instance_type = "t3.micro"
-  key_name      = "vockey" # Usamos la llave permitida
+  ami                  = local.ami_id_effective
+  instance_type        = "t3.micro"
+  key_name             = "vockey"
+  iam_instance_profile = "LabInstanceProfile" # <-- ¡EL PASE VIP DE AWS ACADEMY!
 
   vpc_security_group_ids = [aws_security_group.web_sg.id]
 
