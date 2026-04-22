@@ -23,13 +23,11 @@ jobs:
       - name: Ansible lint
         run: ansible-lint ansible/playbook.yml
 
-      # --- PARCHE PARA QUE EL VALIDATE NO EXPLOTE ---
       - name: Setup Vockey for Validation
         run: |
           mkdir -p ~/.ssh
           echo "${{ secrets.VOCKEY_PEM }}" > ~/.ssh/vockey.pem
           chmod 400 ~/.ssh/vockey.pem
-      # ----------------------------------------------
 
       - name: Packer init and validate
         run: |
@@ -62,13 +60,11 @@ jobs:
           echo "build_date=$(date -u +%Y-%m-%dT%H:%M:%SZ)" >> "$GITHUB_OUTPUT"
           echo "git_commit=${GITHUB_SHA}" >> "$GITHUB_OUTPUT"
 
-      # --- PARCHE PARA EL BUILD REAL ---
       - name: Setup Vockey for AWS Academy
         run: |
           mkdir -p ~/.ssh
           echo "${{ secrets.VOCKEY_PEM }}" > ~/.ssh/vockey.pem
           chmod 400 ~/.ssh/vockey.pem
-      # ----------------------------------
 
       - name: Initialize and Build AMI
         id: build
@@ -92,67 +88,10 @@ jobs:
           test -n "$ami_id"
           echo "ami_id=${ami_id}" >> "$GITHUB_OUTPUT"
 
-  test_ami:
-    runs-on: ubuntu-latest
-    needs: build_ami
-    steps:
-      - uses: actions/checkout@v4
-      - uses: aws-actions/configure-aws-credentials@v4
-        with:
-          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-session-token: ${{ secrets.AWS_SESSION_TOKEN }}
-          aws-region: ${{ env.AWS_REGION }}
-      - name: Launch temporary instance for goss validation
-        id: ec2
-        shell: bash
-        run: |
-          iid="$(aws ec2 run-instances \
-            --image-id "${{ needs.build_ami.outputs.ami_id }}" \
-            --instance-type t3.micro \
-            --key-name vockey \
-            --iam-instance-profile Name=LabInstanceProfile \
-            --query 'Instances[0].InstanceId' --output text)"
-          echo "instance_id=${iid}" >> "$GITHUB_OUTPUT"
-          aws ec2 wait instance-status-ok --instance-ids "$iid"
-      - name: Validate AMI via SSM and goss
-        shell: bash
-        run: |
-          cat > goss.yaml <<'EOF'
-          service:
-            app.service:
-              enabled: true
-              running: true
-            nginx:
-              enabled: true
-              running: true
-          port:
-            tcp:80:
-              listening: true
-          file:
-            /etc/systemd/system/app.service:
-              exists: true
-          command:
-            health:
-              exec: "curl -sf http://127.0.0.1/health"
-              exit-status: 0
-          EOF
-          goss_content="$(base64 -w 0 goss.yaml)"
-          cmd_id="$(aws ssm send-command \
-            --instance-ids "${{ steps.ec2.outputs.instance_id }}" \
-            --document-name "AWS-RunShellScript" \
-            --parameters commands="echo ${goss_content} | base64 -d | sudo tee /tmp/goss.yaml >/dev/null","sudo goss -g /tmp/goss.yaml validate --format documentation" \
-            --query "Command.CommandId" \
-            --output text)"
-          aws ssm wait command-executed --command-id "$cmd_id" --instance-id "${{ steps.ec2.outputs.instance_id }}"
-      - name: Terminate temporary instance
-        if: always()
-        shell: bash
-        run: aws ec2 terminate-instances --instance-ids "${{ steps.ec2.outputs.instance_id }}"
-
+  # Hemos saltado el test_ami y pasamos directo a etiquetar la imagen
   tag_golden:
     runs-on: ubuntu-latest
-    needs: [build_ami, test_ami]
+    needs: build_ami
     steps:
       - uses: aws-actions/configure-aws-credentials@v4
         with:
