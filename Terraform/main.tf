@@ -16,7 +16,7 @@ provider "aws" {
 # Comentamos la lógica dinámica y forzamos el AMI ID exacto
 locals {
   # ami_id_effective = var.use_ssm_ami ? data.aws_ssm_parameter.current_ami[0].value : data.aws_ami.latest_golden.id
-  ami_id_effective = "ami-08a7b55e3f225a68e" # <-- PON TU AMI ID AQUÍ SI ES DIFERENTE
+  ami_id_effective = "ami-0165e68ac51ff3eb2" # <-- PON TU AMI ID AQUÍ SI ES DIFERENTE
 }
 # ----------------------------------------------
 
