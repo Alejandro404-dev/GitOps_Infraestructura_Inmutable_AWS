@@ -15,3 +15,6 @@
 # --- Archivos de Sistema ---
 .DS_Store
 Thumbs.db
+
+# --- Cursor / IDE local ---
+.cursor/
