@@ -13,7 +13,7 @@ packer {
 
 variable "aws_region" {
   type    = string
-  default = "us-east-1"
+  default = "us-east-2"
 }
 
 variable "version" {
@@ -36,10 +36,6 @@ source "amazon-ebs" "ubuntu2204" {
   instance_type = "t3.micro"
   ssh_username  = "ubuntu"
 
-  # --- EL PARCHE DE AWS ACADEMY ---
-  ssh_keypair_name     = "vockey"
-  ssh_private_key_file = "~/.ssh/vockey.pem" 
-  # --------------------------------
 
   ami_name        = "app-ubuntu-2204-${var.version}"
   ami_description = "Golden AMI Ubuntu 22.04 LTS para app"

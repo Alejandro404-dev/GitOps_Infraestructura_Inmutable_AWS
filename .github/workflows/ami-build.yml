@@ -9,7 +9,7 @@ on:
   workflow_dispatch:
 
 env:
-  AWS_REGION: us-east-1
+  AWS_REGION: us-east-2
   SSM_AMI_PARAM_NAME: /app/ami-id
 
 jobs:
@@ -22,12 +22,6 @@ jobs:
         run: pipx install ansible-lint 
       - name: Ansible lint
         run: ansible-lint ansible/playbook.yml
-
-      - name: Setup Vockey for Validation
-        run: |
-          mkdir -p ~/.ssh
-          echo "${{ secrets.VOCKEY_PEM }}" > ~/.ssh/vockey.pem
-          chmod 400 ~/.ssh/vockey.pem
 
       - name: Packer init and validate
         run: |
@@ -48,7 +42,6 @@ jobs:
         with:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-session-token: ${{ secrets.AWS_SESSION_TOKEN }}
           aws-region: ${{ env.AWS_REGION }}
       - uses: hashicorp/setup-packer@v3
       
@@ -59,12 +52,6 @@ jobs:
           echo "version=v$(date -u +%Y.%m.%d).${GITHUB_RUN_NUMBER}" >> "$GITHUB_OUTPUT"
           echo "build_date=$(date -u +%Y-%m-%dT%H:%M:%SZ)" >> "$GITHUB_OUTPUT"
           echo "git_commit=${GITHUB_SHA}" >> "$GITHUB_OUTPUT"
-
-      - name: Setup Vockey for AWS Academy
-        run: |
-          mkdir -p ~/.ssh
-          echo "${{ secrets.VOCKEY_PEM }}" > ~/.ssh/vockey.pem
-          chmod 400 ~/.ssh/vockey.pem
 
       - name: Initialize and Build AMI
         id: build
@@ -88,7 +75,6 @@ jobs:
           test -n "$ami_id"
           echo "ami_id=${ami_id}" >> "$GITHUB_OUTPUT"
 
-  # Hemos saltado el test_ami y pasamos directo a etiquetar la imagen
   tag_golden:
     runs-on: ubuntu-latest
     needs: build_ami
@@ -97,7 +83,6 @@ jobs:
         with:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-session-token: ${{ secrets.AWS_SESSION_TOKEN }}
           aws-region: ${{ env.AWS_REGION }}
       - name: Tag AMI as golden
         shell: bash
@@ -110,5 +95,3 @@ jobs:
               Key=BuildDate,Value=${{ needs.build_ami.outputs.build_date }} \
               Key=GitCommit,Value=${{ needs.build_ami.outputs.git_commit }} \
               Key=Golden,Value=true
-
-  
