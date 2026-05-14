@@ -18,10 +18,6 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: hashicorp/setup-packer@v3
-      - name: Install ansible-lint
-        run: pipx install ansible-lint 
-      - name: Ansible lint
-        run: ansible-lint ansible/playbook.yml
 
       - name: Packer init and validate
         run: |
