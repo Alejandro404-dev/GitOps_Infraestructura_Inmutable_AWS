@@ -95,3 +95,12 @@ jobs:
               Key=BuildDate,Value=${{ needs.build_ami.outputs.build_date }} \
               Key=GitCommit,Value=${{ needs.build_ami.outputs.git_commit }} \
               Key=Golden,Value=true
+
+      - name: Update SSM Parameter
+        shell: bash
+        run: |
+          aws ssm put-parameter \
+            --name "${{ env.SSM_AMI_PARAM_NAME }}" \
+            --value "${{ needs.build_ami.outputs.ami_id }}" \
+            --type "String" \
+            --overwrite
