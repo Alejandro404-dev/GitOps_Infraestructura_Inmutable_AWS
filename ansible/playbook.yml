@@ -1,4 +1,4 @@
-- name: Bake Golden AMI for app
+﻿- name: Bake Golden AMI for app
   hosts: all
   become: true
   vars:
